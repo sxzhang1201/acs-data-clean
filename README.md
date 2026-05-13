@@ -1,86 +1,110 @@
-# ACS Data Clean Pipeline
+# ACS Data Cleaning
 
-This project prepares ACS raw CSV files by assigning the official ACS header, correcting shifted rows with checkpoint rules, and exporting cleaned files for downstream processing.
+This project turns raw ACS CSV files into cleaned CSV files with the correct header/template. It also fixes common row shifts and writes log files so you can see what was changed.
 
-## What This Pipeline Does
+The raw ACS files do not have headers. You provide:
 
-The script `acs_add_header_export.Rmd` performs the following steps:
+- a raw data file, for example `raw/acs-nmcb-2.csv`
+- a matching header/template file, for example `header/nmcb-acs-header-2.csv`
 
-1. Reads header definitions from `header/ACS_header.csv`
-2. Reads all raw files from `raw/`
-3. Expands pipe-packed triplets like `1|Question text|0` into separate fields
-4. Aligns each row to ACS headers
-5. Uses checkpoint correction to fix row shifts (deletes misaligned tokens until expected checkpoint values are found)
-6. Writes cleaned files to `export/`
-7. Writes deleted-token audit log to `export/deleted_cells_log.csv`
+The script writes a cleaned file to `export/`.
 
-## Folder Structure
+## Quick Start
 
-- `raw/` - input ACS CSV files without headers
-- `header/ACS_header.csv` - target header row
-- `acs_add_header_export.Rmd` - main processing pipeline
-- `export/` - cleaned output files and deletion log
-
-## How To Run
-
-From the project root:
+Open Terminal in this project folder and run:
 
 ```bash
-Rscript -e "rmarkdown::render('acs_add_header_export.Rmd', quiet = TRUE)"
+Rscript process_acs.R
 ```
+
+This processes the standard folder setup:
+
+- `raw/acs-nmcb-1.csv` uses `header/nmcb-acs-header-1.csv`
+- `raw/acs-nmcb-2.csv` uses `header/nmcb-acs-header-2.csv`
+- and so on through file 6
+
+Cleaned files are written to `export/`.
+
+## Process One File
+
+Use this when you only want to clean one raw file with one template:
+
+```bash
+Rscript process_acs.R --raw raw/acs-nmcb-2.csv --header header/nmcb-acs-header-2.csv --out export/acs-nmcb-2.csv
+```
+
+Replace the three file paths after `--raw`, `--header`, and `--out` with your own files.
+
+## Folder Layout
+
+- `raw/` contains raw ACS CSV files without headers.
+- `header/` contains one-row header/template CSV files.
+- `export/` contains cleaned output files.
+- `R/acs_cleaning.R` contains the reusable cleaning functions.
+- `process_acs.R` is the simple script most users should run.
 
 ## Output Files
 
-- `export/acs-nmcb-*.csv` - cleaned, header-aligned files
-- `export/deleted_cells_log.csv` - every checkpoint-driven deletion
-  - `file`: source file name
-  - `row`: row index in source file
-  - `header`: checkpoint header being enforced
-  - `expected_value`: required value for that checkpoint
-  - `deleted_count`: number of tokens removed
-  - `deleted_content`: removed token content joined by ` || `
+After running the script, check `export/`:
 
-## Checkpoint Logic
+- `acs-nmcb-*.csv`: cleaned data files with headers.
+- `deleted_cells_log.csv`: records values removed during checkpoint correction.
+- `generalized_rule_misalignment_log.csv`: records remaining possible alignment warnings.
 
-When a checkpoint exists for a header:
+For one-file processing, the logs are named after the output file, for example:
 
-- If current token matches expected value: keep it
-- If not: scan forward until expected value is found
-- Delete all intervening tokens, log them, then continue
-- If expected value is not found in the remaining row: leave field empty and log the failed checkpoint
+- `acs-nmcb-2_deleted_cells_log.csv`
+- `acs-nmcb-2_generalized_rule_misalignment_log.csv`
 
-## Generalized Rules
+## What The Cleaning Does
 
-These are applied when no explicit header-specific checkpoint is defined:
+The script:
 
-- `*_mouse` -> `mouse`
-- `*_wordlist` -> `wordslist`
-- `*video_element*` -> `video`
-- `*_HANDEDNESS` -> `handedness`
-- `*_MOUSETYPE` -> `mousetype`
-- `*typetest_element*` -> `typetest`
-- `*clickskills_element*` -> `clickskills`
-- `*dragskills_element*` -> `dragskills`
-- `*digitspan_element*` -> `digitspan`
-- `*_DIGITS_FW_DEMO` -> `forward-demo`
-- `*_DIGITS_FW` -> `forward`
-- `*_DIGITS_BW_DEMO` -> `reverse-demo`
-- `*_DIGITS_BW` -> `reverse`
-- `*_questionnaire<nr>` -> `questionnaire`
-- `*_questionnaire_ntli<nr>` -> `questionnaire-ntli`
+1. Reads the header/template row.
+2. Reads each raw data row.
+3. Expands packed questionnaire values like `1|Question text|0` into separate columns.
+4. Places values under the correct template columns.
+5. Uses checkpoint words such as `message`, `video`, `questionnaire`, and `mousetype` to detect and correct shifts.
+6. Writes a cleaned CSV and log files.
 
-## Explicit Checkpoints
+## Important Naming Rule For Batch Mode
 
-In addition to generalized rules, explicit checkpoint mappings are defined in `checkpoint_map` in `acs_add_header_export.Rmd`.
+Batch mode expects this naming pattern:
 
-Priority order:
+- raw file: `acs-nmcb-1.csv`
+- matching header: `nmcb-acs-header-1.csv`
 
-1. Explicit checkpoint map
-2. Generalized rules
+The number must match. For example, raw file `acs-nmcb-4.csv` will use `nmcb-acs-header-4.csv`.
 
-So explicit rules always override generalized pattern rules.
+Extra files such as `acs-nmcb-2 copy.csv` are ignored by the standard batch command.
 
-## Notes
+## Requirements
 
-- The first column header may include a BOM marker (`O_testbattery`), which is expected for some UTF-8 CSV workflows.
-- If you add new tasks later (type conversion, recoding, QA checks), append them in the placeholder chunk at the bottom of `acs_add_header_export.Rmd`.
+You need R installed and the R package `data.table`.
+
+If `data.table` is missing, run this once in R:
+
+```r
+install.packages("data.table")
+```
+
+## For Advanced Users
+
+You can call the reusable functions directly from R:
+
+```r
+source("R/acs_cleaning.R")
+
+process_acs_file(
+  raw_file = "raw/acs-nmcb-2.csv",
+  header_file = "header/nmcb-acs-header-2.csv",
+  output_file = "export/acs-nmcb-2.csv"
+)
+```
+
+Or process the standard folders:
+
+```r
+source("R/acs_cleaning.R")
+process_acs_batch(raw_dir = "raw", header_dir = "header", export_dir = "export")
+```
