@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this ACS data cleaning tool, please cite it using the metadata below."
+title: "ACS Data Clean"
+version: "0.1.0"
+date-released: "2026-05-18"
+type: software
+authors:
+  - family-names: Zhang
+    given-names: Shuxin
+    orcid: "https://orcid.org/0000-0003-4715-9070"
+repository-code: "https://github.com/nmcb-fair/acs-data-clean"
+url: "https://github.com/nmcb-fair/acs-data-clean"
+abstract: "Reusable R scripts for cleaning raw ACS CSV exports with header templates, row-shift correction, audit logs, and dated outputs."
+license: MIT

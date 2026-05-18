@@ -5,3 +5,6 @@
 .Ruserdata
 raw/*.csv
 export/*.csv
+.DS_Store
+export/**/*.csv
+export/**/.DS_Store
