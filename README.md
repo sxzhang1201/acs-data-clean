@@ -179,6 +179,10 @@ Forking is useful if you want to change the code. See `docs/CONTRIBUTING.md` bef
 - Maintainer guidance is in `docs/MAINTAINERS.md`.
 - Author and contributor information is in `docs/AUTHORS.md`.
 
+## Acknowledgements
+
+We thank [Maryse Luijendijk](https://www.nki.nl/research/find-a-researcher/researchers/maryse-luijendijk) ([m.luijendijk@nki.nl](mailto:m.luijendijk@nki.nl)) for reviewing this project.
+
 ## License
 
 This project is released under the MIT License. See `LICENSE`.
